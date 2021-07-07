@@ -3,21 +3,24 @@
 sumologic_install:
   accessid: 'access_id'
   accesskey: 'accesskey'
-
+  ephemeral: 'true'
+  sources: '/etc/sumo/sources.json'
+  name: '{{ salt['grains.get']('nodename') }}'
+  javamaxmemory: 128
+  targetCPU: 10
 sumologic:
-  file_sources:
-    - auth:
-      name: auth_log
-      path: "/var/log/auth*"
-      category: linux_apps_logs
-    - local_syslog:
-      name: syslog
-      path: "/var/log/syslog"
-      category: linux_apps_logs
-  script_sources:
-    - script1:
-      name: script1
-      description: some description
-      commands: ["/bin/foo", "/bin/bar"]
-      cronExpression: "* * * * * "
-      category: scripts
+  timezone: 'UTC'
+  sources:
+    syslog:
+      sourceType: Syslog
+      category: syslog
+      protocol: UDP
+      port: 1514
+    applog:
+      sourceType: LocalFile
+      pathExpression: /var/log/application.log
+      description: galaxy stdout
+      category: applog
+      multilineProcessingEnabled: true
+      useAutolineMatching: true
+    otherlog: override

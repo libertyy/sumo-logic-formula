@@ -1,48 +1,27 @@
-{% set sumo_tz = salt['pillar.get']('sumologic:timezone', "America/Los_Angeles") %}
-{% set f_sources = salt['pillar.get']('sumologic:file_sources', {}) %}
-{% set s_sources = salt['pillar.get']('sumologic:script_sources') %}
+#!py
 
-{
-  "api.version": "v1",
-  "sources": [
-    {% for source in f_sources %}
-     {
-     "sourceType" : "LocalFile",
-     "name": "{{ source["name"]}}",
-     "pathExpression": "{{ source["path"]}}",
-     "category": "{{source["category"]}}",
-     "hostName": "{{salt['grains.get']('id')}}",
-     "useAutolineMatching": false,
-     "multilineProcessingEnabled": false,
-     "automaticDateParsing": true,
-     "timeZone": "{{ sumo_tz }}",
-     "forceTimeZone": false,
-     "defaultDateFormat": "dd/MMM/yyyy HH:mm:ss",
-     "filters": [],
-     "blacklist": []
-     }{% if not loop.last %},{% endif %}
-    {% endfor %}
-    {% if s_sources %}
-    ,
-    {% for source in s_sources %}
-    {
-    "sourceType" : "Script",
-    "commands": {{ source.commands | json() }},
-    "cronExpression": "{{ source.cronExpression}}",
-    "workingDir": "/tmp",
-    "timeout": 60,
-    "name" : "{{ source.name }}",
-    "description" : "{{ source.description }}",
-    "category" : "{{ source.category}}",
-    "timeZone": "{{ sumo_tz }}",
-    "automaticDateParsing": true,
-    "multilineProcessingEnabled": true,
-    "useAutolineMatching": true,
-    "manualPrefixRegexp": "",
-    "forceTimeZone": false,
-    "defaultDateFormat": "dd/MMM/yyyy HH:mm:ss"
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
-    {% endif %}
-    ]
+import json
+
+def run():
+  sumo_tz = __salt__['pillar.get']('sumologic:timezone', "America/Los_Angeles")
+  sources = __salt__['pillar.get']('sumologic:sources', {})
+
+  config = {
+    'api.version': "v1",
+    'collector': {
+      'collectorType': "Installable",
+      'description': "An installed collector",
+      'targetCPU': __salt__['pillar.get']('sumologic_install:targetCPU', 10)
+    },
+    'sources': []
   }
+
+  for sourcename,source in sources.iteritems():
+    if isinstance(source, dict):
+      tmp = {'name': sourcename}
+      for k,v in source.iteritems():
+        tmp[k] = v
+      config['sources'].append(tmp)
+
+  return json.dumps(config, sort_keys=True, indent=4)
+
